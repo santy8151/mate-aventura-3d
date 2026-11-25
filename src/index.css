@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Nunito', ui-rounded, system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Fredoka', 'Nunito', ui-rounded, system-ui, sans-serif;
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.84) translateY(10px);
+  }
+  70% {
+    transform: scale(1.03) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes shakeGentle {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px) rotate(-1deg); }
+  40% { transform: translateX(8px) rotate(1deg); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+@keyframes bounceCounter {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+.animate-float-slow {
+  animation: floatSlow 3s ease-in-out infinite;
+}
+
+.animate-pop-in {
+  animation: popIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-shake-gentle {
+  animation: shakeGentle 0.42s ease-in-out;
+}
+
+.animate-bounce-counter {
+  animation: bounceCounter 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Tactile Nintendo/Duolingo 3D button press */
+.btn-toy {
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+
+.btn-toy:active:not(:disabled) {
+  transform: translateY(4px);
+}
+
+@media print {
+  body {
+    overflow: visible !important;
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
