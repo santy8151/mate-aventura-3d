@@ -9,7 +9,9 @@ import { GameOverModal, LevelCompleteModal } from './components/Modals';
 import { WelcomeOverlay } from './components/WelcomeOverlay';
 import { GameStage3D } from './three/GameStage3D';
 import type {
+  AllyId,
   BattleVisualState,
+  CartesianChallenge,
   GameScreen,
   LaneIndex,
   LevelNumber,
@@ -17,12 +19,25 @@ import type {
   OwlVisualState,
   PlatformVisualState,
   PlayerStats,
+  ProbabilityScenario,
   RaceVisualState,
 } from './types/game';
-import { generateMathProblem } from './utils/mathGenerator';
+import {
+  generateBattleProblem,
+  generateCartesianChallenges,
+  generateOwlProbabilityScenarios,
+  generateRaceProblem,
+} from './utils/mathGenerator';
 
 const MAX_LIVES = 3;
-const TOTAL_PLATFORM_STAGES = 4;
+const MAX_BATTLE_ROUNDS = 4;
+const TOTAL_CARTESIAN_STAGES = 4;
+
+const ALLY_NAMES: Record<AllyId, string> = {
+  dino: 'Dino Verde',
+  princess: 'Princesa Estela',
+  toad: 'Capitán Champi',
+};
 
 export function App() {
   const [screen, setScreen] = useState<GameScreen>('welcome');
@@ -41,24 +56,34 @@ export function App() {
     reflectionText: '',
   });
 
-  // Estado Nivel 1: Batalla de Superhéroes
-  const [battleProblem, setBattleProblem] = useState<MathProblem>(() => generateMathProblem(1, 0));
-  const [battleWrongChoices, setBattleWrongChoices] = useState<number[]>([]);
+  // Nivel 1: Batalla de Héroes con Aliados vs Jefe Gigante (Proporciones y Probabilidad)
+  const [battleProblem, setBattleProblem] = useState<MathProblem>(() => generateBattleProblem(0));
+  const [battleWrongChoices, setBattleWrongChoices] = useState<(number | string)[]>([]);
   const [battleLocked, setBattleLocked] = useState(false);
-  const [battleFeedback, setBattleFeedback] = useState<{ type: 'good' | 'bad'; text: string } | null>(null);
+  const [battleFeedback, setBattleFeedback] = useState<{
+    type: 'good' | 'bad' | 'shield';
+    text: string;
+  } | null>(null);
+  const [allyShields, setAllyShields] = useState<Record<AllyId, boolean>>({
+    dino: true,
+    princess: true,
+    toad: true,
+  });
   const [battleVisual, setBattleVisual] = useState<BattleVisualState>({
     round: 0,
-    villainHp: 3,
-    maxVillainHp: 3,
+    villainHp: MAX_BATTLE_ROUNDS,
+    maxVillainHp: MAX_BATTLE_ROUNDS,
+    activeAlly: 'dino',
+    shieldActive: true,
     event: 'idle',
     eventTick: 0,
   });
 
-  // Estado Nivel 2: Carrera Matemática
-  const [raceProblem, setRaceProblem] = useState<MathProblem>(() => generateMathProblem(2, 0));
+  // Nivel 2: Carrera Matemática
+  const [raceProblem, setRaceProblem] = useState<MathProblem>(() => generateRaceProblem(0));
   const [raceFeedback, setRaceFeedback] = useState<{ type: 'good' | 'bad'; text: string } | null>(null);
   const [raceVisual, setRaceVisual] = useState<RaceVisualState>(() => {
-    const p = generateMathProblem(2, 0);
+    const p = generateRaceProblem(0);
     return {
       lane: 1,
       gateProgress: 0,
@@ -74,23 +99,34 @@ export function App() {
   const racePausedRef = useRef(false);
   const raceBoostTimerRef = useRef(0);
 
-  // Estado Nivel 3: Plataformas Mario Bros (4 problemas progresivos + evolución)
-  const [platformProblem, setPlatformProblem] = useState<MathProblem>(() => generateMathProblem(3, 0));
+  // Nivel 3: Plano Cartesiano en Mundo Mario Wonder (4 retos)
+  const [cartesianChallenges, setCartesianChallenges] = useState<CartesianChallenge[]>(() =>
+    generateCartesianChallenges()
+  );
   const [platformLocked, setPlatformLocked] = useState(false);
-  const [platformFeedback, setPlatformFeedback] = useState<{ type: 'good' | 'bad'; text: string } | null>(null);
-  const [platformVisual, setPlatformVisual] = useState<PlatformVisualState>({
+  const [platformFeedback, setPlatformFeedback] = useState<{
+    type: 'good' | 'bad';
+    text: string;
+  } | null>(null);
+  const [platformVisual, setPlatformVisual] = useState<PlatformVisualState>(() => ({
     stageIndex: 0,
-    totalStages: TOTAL_PLATFORM_STAGES,
-    jumpCount: 0,
-    targetAnswer: 4,
+    totalStages: TOTAL_CARTESIAN_STAGES,
+    heroX: 0,
+    heroY: 0,
+    targetX: 2,
+    targetY: 3,
+    foundCoords: [],
     evolutionTier: 0,
     evolved: false,
     event: 'idle',
     eventTick: 0,
-  });
+  }));
   const headAnchorRef = useRef<HTMLDivElement | null>(null);
 
-  // Estado Nivel 4: Búho Mentor
+  // Nivel 4: Búho Mentor (Situaciones de Probabilidad + Reflexión)
+  const [owlScenarios, setOwlScenarios] = useState<[ProbabilityScenario, ProbabilityScenario]>(() =>
+    generateOwlProbabilityScenarios()
+  );
   const [owlVisual, setOwlVisual] = useState<OwlVisualState>({
     step: 'summary',
     event: 'idle',
@@ -112,15 +148,18 @@ export function App() {
 
   const initLevel1 = useCallback(() => {
     clearTimers();
-    const p = generateMathProblem(1, 0);
+    const p = generateBattleProblem(0);
     setBattleProblem(p);
     setBattleWrongChoices([]);
     setBattleLocked(false);
     setBattleFeedback(null);
+    setAllyShields({ dino: true, princess: true, toad: true });
     setBattleVisual((prev) => ({
       round: 0,
-      villainHp: 3,
-      maxVillainHp: 3,
+      villainHp: MAX_BATTLE_ROUNDS,
+      maxVillainHp: MAX_BATTLE_ROUNDS,
+      activeAlly: 'dino',
+      shieldActive: true,
       event: 'idle',
       eventTick: prev.eventTick + 1,
     }));
@@ -128,7 +167,7 @@ export function App() {
 
   const initLevel2 = useCallback(() => {
     clearTimers();
-    const p = generateMathProblem(2, 0);
+    const p = generateRaceProblem(0);
     racePausedRef.current = false;
     raceBoostTimerRef.current = 0;
     setRaceProblem(p);
@@ -148,15 +187,18 @@ export function App() {
 
   const initLevel3 = useCallback(() => {
     clearTimers();
-    const p = generateMathProblem(3, 0);
-    setPlatformProblem(p);
+    const challenges = generateCartesianChallenges();
+    setCartesianChallenges(challenges);
     setPlatformLocked(false);
     setPlatformFeedback(null);
     setPlatformVisual((prev) => ({
       stageIndex: 0,
-      totalStages: TOTAL_PLATFORM_STAGES,
-      jumpCount: 0,
-      targetAnswer: p.answer,
+      totalStages: TOTAL_CARTESIAN_STAGES,
+      heroX: 0,
+      heroY: 0,
+      targetX: challenges[0].targetX,
+      targetY: challenges[0].targetY,
+      foundCoords: [],
       evolutionTier: 0,
       evolved: false,
       event: 'idle',
@@ -166,6 +208,7 @@ export function App() {
 
   const initLevel4 = useCallback(() => {
     clearTimers();
+    setOwlScenarios(generateOwlProbabilityScenarios());
     setOwlVisual((prev) => ({
       step: 'summary',
       event: 'idle',
@@ -237,10 +280,25 @@ export function App() {
   }, []);
 
   // ==========================================
-  // LÓGICA NIVEL 1: BATALLA DE SUPERHÉROES
+  // NIVEL 1: BATALLA CON ALIADOS Y JEFE GIGANTE
   // ==========================================
+  const handleSelectAlly = useCallback(
+    (allyId: AllyId) => {
+      if (battleLocked) return;
+      soundEngine.playClick();
+      setBattleVisual((prev) => ({
+        ...prev,
+        activeAlly: allyId,
+        shieldActive: allyShields[allyId],
+        event: 'ally-summon',
+        eventTick: prev.eventTick + 1,
+      }));
+    },
+    [battleLocked, allyShields]
+  );
+
   const handleBattleAnswer = useCallback(
-    (choice: number) => {
+    (choice: number | string) => {
       if (battleLocked || screen !== 'playing' || level !== 1) return;
 
       if (choice === battleProblem.answer) {
@@ -263,18 +321,18 @@ export function App() {
         setBattleFeedback({
           type: 'good',
           text: isVictory
-            ? '¡Súper Rayo Final! ¡Derrotaste al Dr. Glitcheo!'
-            : '¡Impacto directo! +15 monedas',
+            ? '¡Súper Combo Final! ¡Derrotaron al Titán Caos-X!'
+            : `¡Ataque combinado con ${ALLY_NAMES[battleVisual.activeAlly]}! +15 monedas`,
         });
 
         if (isVictory) {
           scheduleTimeout(() => {
             soundEngine.playLevelWin();
             setScreen('level-complete');
-          }, 1250);
+          }, 1300);
         } else {
           scheduleTimeout(() => {
-            const nextProb = generateMathProblem(1, nextRound);
+            const nextProb = generateBattleProblem(nextRound);
             setBattleProblem(nextProb);
             setBattleWrongChoices([]);
             setBattleFeedback(null);
@@ -285,36 +343,66 @@ export function App() {
               event: 'idle',
               eventTick: prev.eventTick + 1,
             }));
-          }, 950);
+          }, 1000);
         }
       } else {
-        soundEngine.playError();
-        recordWrong();
         setBattleWrongChoices((prev) => [...prev, choice]);
-        setBattleVisual((prev) => ({
-          ...prev,
-          event: 'villain-attack',
-          eventTick: prev.eventTick + 1,
-        }));
+        const currentAlly = battleVisual.activeAlly;
+        const hasShield = allyShields[currentAlly];
 
-        const nextLives = lives - 1;
-        setLives(nextLives);
-        setBattleFeedback({
-          type: 'bad',
-          text: `¡Casi! ${choice} no es correcto. ¡Perdiste 1 corazón!`,
-        });
+        if (hasShield) {
+          // El aliado bloquea el contraataque gigante con su escudo protector!
+          soundEngine.playTurbo();
+          setAllyShields((prev) => ({ ...prev, [currentAlly]: false }));
+          setBattleVisual((prev) => ({
+            ...prev,
+            shieldActive: false,
+            event: 'ally-block',
+            eventTick: prev.eventTick + 1,
+          }));
+          setBattleFeedback({
+            type: 'shield',
+            text: `¡${ALLY_NAMES[currentAlly]} bloqueó el golpe con su escudo! Elige otro aliado para tener escudo nuevo.`,
+          });
+        } else {
+          soundEngine.playError();
+          recordWrong();
+          setBattleVisual((prev) => ({
+            ...prev,
+            event: 'villain-attack',
+            eventTick: prev.eventTick + 1,
+          }));
 
-        if (nextLives <= 0) {
-          setBattleLocked(true);
-          scheduleTimeout(() => setScreen('game-over'), 700);
+          const nextLives = lives - 1;
+          setLives(nextLives);
+          setBattleFeedback({
+            type: 'bad',
+            text: `¡Casi! ${String(choice)} no era correcto y no quedaba escudo. -1 corazón`,
+          });
+
+          if (nextLives <= 0) {
+            setBattleLocked(true);
+            scheduleTimeout(() => setScreen('game-over'), 700);
+          }
         }
       }
     },
-    [battleLocked, screen, level, battleProblem, battleVisual, lives, recordCorrect, recordWrong, scheduleTimeout]
+    [
+      battleLocked,
+      screen,
+      level,
+      battleProblem,
+      battleVisual,
+      allyShields,
+      lives,
+      recordCorrect,
+      recordWrong,
+      scheduleTimeout,
+    ]
   );
 
   // ==========================================
-  // LÓGICA NIVEL 2: CARRERA MATEMÁTICA
+  // NIVEL 2: CARRERA MATEMÁTICA
   // ==========================================
   const handleSelectRaceLane = useCallback(
     (lane: LaneIndex) => {
@@ -398,7 +486,7 @@ export function App() {
             };
           }
 
-          const nextProb = generateMathProblem(2, nextGate);
+          const nextProb = generateRaceProblem(nextGate);
           setRaceProblem(nextProb);
           setRaceFeedback({ type: 'good', text: '¡TURBO ACTIVADO! +20 monedas' });
           scheduleTimeout(() => setRaceFeedback(null), 1300);
@@ -432,7 +520,7 @@ export function App() {
             };
           }
 
-          const retryProb = generateMathProblem(2, prev.gateProgress);
+          const retryProb = generateRaceProblem(prev.gateProgress);
           setRaceProblem(retryProb);
           setRaceFeedback({
             type: 'bad',
@@ -458,66 +546,79 @@ export function App() {
   }, [screen, level, recordCorrect, recordWrong, scheduleTimeout]);
 
   // ==========================================
-  // LÓGICA NIVEL 3: MUNDO MARIO (4 PROBLEMAS)
+  // NIVEL 3: PLANO CARTESIANO MARIO WONDER
   // ==========================================
   const handleHeroHeadScreenPos = useCallback((xPct: number, yPct: number) => {
     const el = headAnchorRef.current;
     if (!el) return;
-    el.style.left = `${Math.max(12, Math.min(88, xPct))}%`;
-    el.style.top = `${Math.max(28, Math.min(68, yPct))}%`;
+    el.style.left = `${Math.max(10, Math.min(90, xPct))}%`;
+    el.style.top = `${Math.max(24, Math.min(76, yPct))}%`;
   }, []);
 
-  const handlePlatformJump = useCallback(() => {
-    if (screen !== 'playing' || level !== 3 || platformVisual.evolved || platformLocked) return;
-    setPlatformFeedback(null);
-    setPlatformVisual((prev) => {
-      const nextCount = Math.min(25, prev.jumpCount + 1);
-      soundEngine.playJump(nextCount);
-      return {
+  const handleCartesianMove = useCallback(
+    (dx: number, dy: number) => {
+      if (screen !== 'playing' || level !== 3 || platformVisual.evolved || platformLocked) return;
+      setPlatformFeedback(null);
+      setPlatformVisual((prev) => {
+        const nextX = Math.max(0, Math.min(5, prev.heroX + dx));
+        const nextY = Math.max(0, Math.min(5, prev.heroY + dy));
+        if (nextX === prev.heroX && nextY === prev.heroY) return prev;
+        soundEngine.playJump(nextX + nextY + 1);
+        return {
+          ...prev,
+          heroX: nextX,
+          heroY: nextY,
+          event: 'hop',
+          eventTick: prev.eventTick + 1,
+        };
+      });
+    },
+    [screen, level, platformVisual.evolved, platformLocked]
+  );
+
+  const handleSelectCartesianTile = useCallback(
+    (x: number, y: number) => {
+      if (screen !== 'playing' || level !== 3 || platformVisual.evolved || platformLocked) return;
+      setPlatformFeedback(null);
+      soundEngine.playJump(x + y + 1);
+      setPlatformVisual((prev) => ({
         ...prev,
-        jumpCount: nextCount,
-        event: 'jump',
+        heroX: x,
+        heroY: y,
+        event: 'hop',
         eventTick: prev.eventTick + 1,
-      };
-    });
-  }, [screen, level, platformVisual.evolved, platformLocked]);
+      }));
+    },
+    [screen, level, platformVisual.evolved, platformLocked]
+  );
 
-  const handlePlatformResetCount = useCallback(() => {
+  const handleConfirmCoordinate = useCallback(() => {
     if (screen !== 'playing' || level !== 3 || platformVisual.evolved || platformLocked) return;
-    soundEngine.playClick();
-    setPlatformFeedback(null);
-    setPlatformVisual((prev) => ({
-      ...prev,
-      jumpCount: 0,
-      event: 'idle',
-      eventTick: prev.eventTick + 1,
-    }));
-  }, [screen, level, platformVisual.evolved, platformLocked]);
 
-  const handlePlatformConfirm = useCallback(() => {
+    const currentChallenge = cartesianChallenges[platformVisual.stageIndex];
+    if (!currentChallenge) return;
+
     if (
-      screen !== 'playing' ||
-      level !== 3 ||
-      platformVisual.evolved ||
-      platformLocked ||
-      platformVisual.jumpCount === 0
+      platformVisual.heroX === currentChallenge.targetX &&
+      platformVisual.heroY === currentChallenge.targetY
     ) {
-      return;
-    }
-
-    if (platformVisual.jumpCount === platformProblem.answer) {
       const nextStage = platformVisual.stageIndex + 1;
-      const isFinalStage = nextStage >= TOTAL_PLATFORM_STAGES;
+      const isFinal = nextStage >= TOTAL_CARTESIAN_STAGES;
+      const newFound = [
+        ...platformVisual.foundCoords,
+        { x: currentChallenge.targetX, y: currentChallenge.targetY },
+      ];
 
-      if (isFinalStage) {
+      if (isFinal) {
         soundEngine.playEvolution();
         recordCorrect(35);
         setPlatformFeedback({
           type: 'good',
-          text: '¡EVOLUCIÓN SUPREMA! ¡Has ganado la Corona Real y la Bandera Meta! +35 monedas',
+          text: `¡Coordenada (${currentChallenge.targetX}, ${currentChallenge.targetY}) exacta! ¡Evolucionaste a Rey Coronado! +35 monedas`,
         });
         setPlatformVisual((prev) => ({
           ...prev,
+          foundCoords: newFound,
           evolutionTier: 4,
           evolved: true,
           event: 'evolve',
@@ -526,66 +627,57 @@ export function App() {
       } else {
         soundEngine.playSuccess();
         scheduleTimeout(() => soundEngine.playEvolution(), 160);
-        recordCorrect(20);
+        recordCorrect(25);
         setPlatformLocked(true);
 
-        const nextProb = generateMathProblem(3, nextStage);
-        const powerNames = ['', 'Poder Rojo', 'Capa Heroica', 'Aura Estelar'];
+        const nextChal = cartesianChallenges[nextStage];
         setPlatformFeedback({
           type: 'good',
-          text: `¡Exacto! Evolucionaste a ${powerNames[nextStage]} (+20 monedas). ¡Avanzando al bloque ${nextStage + 1}!`,
+          text: `¡Encontraste ${currentChallenge.itemLabel} en (${currentChallenge.targetX}, ${currentChallenge.targetY})! +25 monedas`,
         });
 
         setPlatformVisual((prev) => ({
           ...prev,
           stageIndex: nextStage,
-          jumpCount: 0,
-          targetAnswer: nextProb.answer,
+          targetX: nextChal.targetX,
+          targetY: nextChal.targetY,
+          foundCoords: newFound,
           evolutionTier: nextStage,
-          event: 'advance',
+          event: 'discover',
           eventTick: prev.eventTick + 1,
         }));
 
         scheduleTimeout(() => {
-          setPlatformProblem(nextProb);
           setPlatformLocked(false);
           setPlatformFeedback(null);
-        }, 1650);
+        }, 1250);
       }
     } else {
       soundEngine.playError();
       recordWrong();
       const nextLives = lives - 1;
       setLives(nextLives);
-      const hintDir =
-        platformVisual.jumpCount < platformProblem.answer
-          ? `Contaste ${platformVisual.jumpCount}, pero faltaron saltos.`
-          : `Contaste ${platformVisual.jumpCount} y te pasaste.`;
-
       setPlatformFeedback({
         type: 'bad',
-        text: `¡Ups! ${hintDir} Intenta contar de nuevo (${platformProblem.hint})`,
+        text: `Estabas en (${platformVisual.heroX}, ${platformVisual.heroY}), pero el tesoro está en (${currentChallenge.targetX}, ${currentChallenge.targetY}). ${currentChallenge.hint}`,
       });
       setPlatformVisual((prev) => ({
         ...prev,
-        jumpCount: 0,
         event: 'bump-fail',
         eventTick: prev.eventTick + 1,
       }));
 
       if (nextLives <= 0) {
         setPlatformLocked(true);
-        scheduleTimeout(() => setScreen('game-over'), 650);
+        scheduleTimeout(() => setScreen('game-over'), 700);
       }
     }
   }, [
     screen,
     level,
-    platformVisual.evolved,
-    platformVisual.jumpCount,
-    platformVisual.stageIndex,
+    platformVisual,
     platformLocked,
-    platformProblem,
+    cartesianChallenges,
     lives,
     recordCorrect,
     recordWrong,
@@ -598,8 +690,23 @@ export function App() {
   }, [startLevel]);
 
   // ==========================================
-  // LÓGICA NIVEL 4: REFLEXIÓN CON EL BÚHO MENTOR
+  // NIVEL 4: BÚHO MENTOR (PROBABILIDAD + REFLEXIÓN)
   // ==========================================
+  const handleOwlScenarioAnswered = useCallback(
+    (isCorrect: boolean) => {
+      if (isCorrect) {
+        soundEngine.playSuccess();
+        recordCorrect(20);
+        setOwlVisual((prev) => ({ ...prev, event: 'happy', eventTick: prev.eventTick + 1 }));
+      } else {
+        soundEngine.playError();
+        recordWrong();
+        setOwlVisual((prev) => ({ ...prev, event: 'talk', eventTick: prev.eventTick + 1 }));
+      }
+    },
+    [recordCorrect, recordWrong]
+  );
+
   const handleOwlAdvanceStep = useCallback(
     (nextStep: OwlVisualState['step'], event: OwlVisualState['event']) => {
       if (nextStep === 'certificate') {
@@ -622,12 +729,14 @@ export function App() {
   }, []);
 
   const getLevelProgress = (): number => {
-    if (level === 1) return battleVisual.round / 3;
+    if (level === 1) return battleVisual.round / MAX_BATTLE_ROUNDS;
     if (level === 2) return raceVisual.gateProgress / raceVisual.totalGates;
-    if (level === 3) return platformVisual.evolved ? 1 : platformVisual.stageIndex / TOTAL_PLATFORM_STAGES;
-    if (owlVisual.step === 'summary') return 0.25;
-    if (owlVisual.step === 'q1') return 0.5;
-    if (owlVisual.step === 'q2') return 0.75;
+    if (level === 3) return platformVisual.evolved ? 1 : platformVisual.stageIndex / TOTAL_CARTESIAN_STAGES;
+    if (owlVisual.step === 'summary') return 0.15;
+    if (owlVisual.step === 'prob1') return 0.35;
+    if (owlVisual.step === 'prob2') return 0.55;
+    if (owlVisual.step === 'q1') return 0.75;
+    if (owlVisual.step === 'q2') return 0.9;
     return 1;
   };
 
@@ -641,6 +750,7 @@ export function App() {
         platformState={platformVisual}
         owlState={owlVisual}
         onSelectRaceLane={handleSelectRaceLane}
+        onSelectCartesianTile={handleSelectCartesianTile}
         onHeroHeadScreenPos={handleHeroHeadScreenPos}
       />
 
@@ -670,12 +780,15 @@ export function App() {
         <Level1BattleUI
           problem={battleProblem}
           round={battleVisual.round}
-          maxRounds={3}
+          maxRounds={MAX_BATTLE_ROUNDS}
           villainHp={battleVisual.villainHp}
           maxVillainHp={battleVisual.maxVillainHp}
+          activeAlly={battleVisual.activeAlly}
+          allyShields={allyShields}
           wrongChoices={battleWrongChoices}
           feedback={battleFeedback}
           locked={battleLocked}
+          onSelectAlly={handleSelectAlly}
           onSelectAnswer={handleBattleAnswer}
         />
       )}
@@ -696,18 +809,18 @@ export function App() {
 
       {screen === 'playing' && level === 3 && (
         <Level3PlatformUI
-          problem={platformProblem}
+          challenge={cartesianChallenges[platformVisual.stageIndex] || cartesianChallenges[0]}
           stageIndex={platformVisual.stageIndex}
-          totalStages={platformVisual.totalStages}
+          totalStages={TOTAL_CARTESIAN_STAGES}
           evolutionTier={platformVisual.evolutionTier}
-          jumpCount={platformVisual.jumpCount}
+          heroX={platformVisual.heroX}
+          heroY={platformVisual.heroY}
           evolved={platformVisual.evolved}
           locked={platformLocked}
           headAnchorRef={headAnchorRef}
           feedback={platformFeedback}
-          onJump={handlePlatformJump}
-          onResetCount={handlePlatformResetCount}
-          onConfirmCount={handlePlatformConfirm}
+          onMove={handleCartesianMove}
+          onConfirmCoord={handleConfirmCoordinate}
           onProceedToLevel4={handleProceedToLevel4}
         />
       )}
@@ -716,7 +829,9 @@ export function App() {
         <Level4OwlUI
           stats={stats}
           step={owlVisual.step}
+          scenarios={owlScenarios}
           onAdvanceStep={handleOwlAdvanceStep}
+          onScenarioAnswered={handleOwlScenarioAnswered}
           onSaveReflection={handleSaveReflection}
           onPlayAgain={() => {
             soundEngine.playClick();

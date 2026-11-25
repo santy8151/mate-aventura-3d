@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import {
   createCloudModel,
   createCoinMesh,
-  createCuteTree,
   createHeroModel,
   createMarioCastle,
   createOwlModel,
+  createRainbowArch,
   createSkyAirship,
   createWarpPipe,
+  createWonderFlower,
+  createWonderTree,
 } from '../models';
 import type { HeroRig, OwlRig } from '../models';
 import { createMarioSoilTexture, createMysteryBlockTexture, createSkyDome } from '../textures';
@@ -27,12 +29,13 @@ export class WelcomeStage implements StageController {
   public readonly root = new THREE.Group();
   public readonly skyColor = 0x0284c7;
   public readonly fogColor = 0xbae6fd;
-  public readonly cameraPos = new THREE.Vector3(3.4, 4.4, 10.8);
-  public readonly cameraTarget = new THREE.Vector3(0, -0.3, 0);
+  public readonly cameraPos = new THREE.Vector3(3.6, 4.6, 11.4);
+  public readonly cameraTarget = new THREE.Vector3(0, -0.25, 0);
 
   private island = new THREE.Group();
   private hero: HeroRig;
   private owl: OwlRig;
+  private wonderFlower: THREE.Group;
   private airship: THREE.Group;
   private coins: THREE.Group[] = [];
   private clouds: THREE.Group[] = [];
@@ -41,83 +44,86 @@ export class WelcomeStage implements StageController {
     this.root.add(createSkyDome(0x0284c7, 0xbae6fd));
     this.root.add(this.island);
 
-    // Isla 3D texturizada estilo Mario
     const soilTex = createMarioSoilTexture();
     soilTex.repeat.set(3, 1.5);
 
     const grass = new THREE.Mesh(
-      new THREE.CylinderGeometry(5.1, 4.8, 0.72, 32),
-      new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.65 })
+      new THREE.CylinderGeometry(5.3, 5.0, 0.72, 36),
+      new THREE.MeshPhysicalMaterial({ color: 0x22c55e, roughness: 0.45, clearcoat: 0.25 })
     );
     grass.position.y = -0.35;
     grass.receiveShadow = true;
     this.island.add(grass);
 
     const earth = new THREE.Mesh(
-      new THREE.ConeGeometry(4.7, 3.2, 24),
+      new THREE.ConeGeometry(4.9, 3.3, 28),
       new THREE.MeshStandardMaterial({ map: soilTex, roughness: 0.85 })
     );
     earth.rotation.x = Math.PI;
-    earth.position.y = -2.25;
+    earth.position.y = -2.28;
     this.island.add(earth);
 
-    // Elementos icónicos Mario / Nintendo en la isla
-    const pipe = createWarpPipe(1.25, true);
-    pipe.position.set(-3.2, 0, -1.3);
+    const pipe = createWarpPipe(1.3, true);
+    pipe.position.set(-3.3, 0, -1.2);
     const mystery = new THREE.Mesh(
       new THREE.BoxGeometry(0.95, 0.95, 0.95),
-      new THREE.MeshStandardMaterial({ map: createMysteryBlockTexture(), roughness: 0.35 })
+      new THREE.MeshPhysicalMaterial({ map: createMysteryBlockTexture(), roughness: 0.25, clearcoat: 0.5 })
     );
-    mystery.position.set(-0.1, 2.7, -1.1);
+    mystery.position.set(-0.2, 2.75, -1.1);
     mystery.castShadow = true;
 
-    const castle = createMarioCastle(0.38);
-    castle.position.set(0.2, 0, -3.1);
+    const castle = createMarioCastle(0.4);
+    castle.position.set(0.2, 0, -3.2);
 
-    const treeL = createCuteTree(0x16a34a, 0.95);
-    treeL.position.set(-2.4, 0, -2.6);
-    const treeR = createCuteTree(0x4ade80, 0.85);
-    treeR.position.set(3.2, 0, -1.8);
+    const treeL = createWonderTree(0.82);
+    treeL.position.set(-2.5, 0, -2.7);
+    const treeR = createWonderTree(0.75);
+    treeR.position.set(3.2, 0, -1.9);
     this.island.add(pipe, mystery, castle, treeL, treeR);
 
-    // Héroe y Búho
+    this.wonderFlower = createWonderFlower(0.95);
+    this.wonderFlower.position.set(0.2, 2.2, 0.7);
+    this.island.add(this.wonderFlower);
+
     this.hero = createHeroModel(false);
-    this.hero.root.position.set(-1.4, 0, 1.2);
-    this.hero.root.rotation.y = 0.45;
+    this.hero.root.position.set(-1.5, 0, 1.3);
+    this.hero.root.rotation.y = 0.42;
     this.island.add(this.hero.root);
 
     const stump = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.85, 0.98, 0.65, 16),
+      new THREE.CylinderGeometry(0.85, 0.98, 0.65, 18),
       new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 })
     );
-    stump.position.set(1.85, 0.32, 0.8);
+    stump.position.set(1.9, 0.32, 0.9);
     stump.receiveShadow = true;
     this.island.add(stump);
 
     this.owl = createOwlModel();
-    this.owl.root.position.set(1.85, 0.65, 0.8);
+    this.owl.root.position.set(1.9, 0.65, 0.9);
     this.owl.root.rotation.y = -0.35;
     this.owl.root.scale.setScalar(0.85);
     this.island.add(this.owl.root);
 
-    // Monedas giratorias
     for (let i = 0; i < 4; i++) {
       const coin = createCoinMesh();
       const angle = (i / 4) * Math.PI * 2;
-      coin.position.set(Math.cos(angle) * 3.5, 2.1 + (i % 2) * 0.35, Math.sin(angle) * 2.4);
+      coin.position.set(Math.cos(angle) * 3.6, 2.1 + (i % 2) * 0.35, Math.sin(angle) * 2.4);
       this.island.add(coin);
       this.coins.push(coin);
     }
 
-    // Barco volador y nubes de fondo
-    this.airship = createSkyAirship(0.65);
-    this.airship.position.set(-6.5, 5.2, -9);
+    const rainbow = createRainbowArch(14);
+    rainbow.position.set(-2, -1, -18);
+    this.root.add(rainbow);
+
+    this.airship = createSkyAirship(0.68);
+    this.airship.position.set(-6.8, 5.4, -10);
     this.root.add(this.airship);
 
-    const c1 = createCloudModel(1.25);
-    c1.position.set(-5.8, 3.8, -5.5);
-    const c2 = createCloudModel(1.0);
-    c2.position.set(5.8, 4.4, -6.2);
+    const c1 = createCloudModel(1.3);
+    c1.position.set(-6.0, 4.0, -5.8);
+    const c2 = createCloudModel(1.05);
+    c2.position.set(6.0, 4.6, -6.4);
     this.root.add(c1, c2);
     this.clouds.push(c1, c2);
   }
@@ -130,12 +136,15 @@ export class WelcomeStage implements StageController {
     this.hero.rightArm.rotation.z = -0.5 - Math.sin(elapsed * 6) * 0.45;
     this.hero.cape.rotation.x = 0.25 + Math.sin(elapsed * 4) * 0.08;
 
+    this.wonderFlower.position.y = 2.2 + Math.sin(elapsed * 2.4) * 0.16;
+    this.wonderFlower.rotation.y = Math.sin(elapsed * 1.4) * 0.25;
+
     this.owl.head.rotation.z = Math.sin(elapsed * 1.8) * 0.09;
     this.owl.leftWing.rotation.z = 0.22 + Math.sin(elapsed * 3.2) * 0.14;
     this.owl.rightWing.rotation.z = -0.22 - Math.sin(elapsed * 3.2) * 0.14;
 
-    this.airship.position.x = -6.5 + Math.sin(elapsed * 0.25) * 2.2;
-    this.airship.position.y = 5.2 + Math.sin(elapsed * 1.4) * 0.22;
+    this.airship.position.x = -6.8 + Math.sin(elapsed * 0.25) * 2.4;
+    this.airship.position.y = 5.4 + Math.sin(elapsed * 1.4) * 0.22;
 
     this.coins.forEach((c, idx) => {
       c.rotation.y = elapsed * 2.6 + idx;

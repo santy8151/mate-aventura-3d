@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import type { OwlVisualState } from '../../types/game';
-import { createCuteTree, createHeroModel, createMarioCastle, createOwlModel } from '../models';
+import {
+  createHeroModel,
+  createMarioCastle,
+  createOwlModel,
+  createWonderFlower,
+  createWonderTree,
+} from '../models';
 import type { HeroRig, OwlRig } from '../models';
 import { ParticleBurstSystem } from '../particles';
 import { createMarioSoilTexture, createSkyDome } from '../textures';
@@ -10,12 +16,13 @@ export class OwlStage implements StageController {
   public readonly root = new THREE.Group();
   public readonly skyColor = 0x312e81;
   public readonly fogColor = 0x4338ca;
-  public readonly cameraPos = new THREE.Vector3(1.5, 3.4, 8.8);
-  public readonly cameraTarget = new THREE.Vector3(0, 1.5, 0);
+  public readonly cameraPos = new THREE.Vector3(1.5, 3.5, 9.2);
+  public readonly cameraTarget = new THREE.Vector3(0, 1.4, 0);
 
   private owl: OwlRig;
   private hero: HeroRig;
   private trophy: THREE.Group;
+  private wonderFlower: THREE.Group;
   private fireflies: THREE.Mesh[] = [];
   private particles = new ParticleBurstSystem();
 
@@ -32,31 +39,35 @@ export class OwlStage implements StageController {
     soilTex.repeat.set(4, 2);
 
     const clearing = new THREE.Mesh(
-      new THREE.CylinderGeometry(5.8, 5.5, 0.72, 32),
-      new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.7 })
+      new THREE.CylinderGeometry(6.0, 5.7, 0.72, 34),
+      new THREE.MeshPhysicalMaterial({ color: 0x22c55e, roughness: 0.55, clearcoat: 0.2 })
     );
     clearing.position.y = -0.35;
     clearing.receiveShadow = true;
     this.root.add(clearing);
 
     const earth = new THREE.Mesh(
-      new THREE.ConeGeometry(5.4, 3.1, 24),
+      new THREE.ConeGeometry(5.6, 3.2, 26),
       new THREE.MeshStandardMaterial({ map: soilTex, roughness: 0.9 })
     );
     earth.rotation.x = Math.PI;
-    earth.position.y = -2.2;
+    earth.position.y = -2.25;
     this.root.add(earth);
 
-    const t1 = createCuteTree(0x15803d, 1.2);
-    t1.position.set(-4.1, 0, -2.1);
-    const t2 = createCuteTree(0x16a34a, 1.1);
-    t2.position.set(4.0, 0, -2.3);
-    const castle = createMarioCastle(0.45);
-    castle.position.set(0.1, 0, -4.4);
+    const t1 = createWonderTree(0.95);
+    t1.position.set(-4.1, 0, -2.2);
+    const t2 = createWonderTree(0.9);
+    t2.position.set(4.1, 0, -2.4);
+    const castle = createMarioCastle(0.48);
+    castle.position.set(0.1, 0, -4.6);
     this.root.add(t1, t2, castle);
 
+    this.wonderFlower = createWonderFlower(0.75);
+    this.wonderFlower.position.set(0, 1.25, -1.8);
+    this.root.add(this.wonderFlower);
+
     const stump = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.05, 1.2, 0.8, 16),
+      new THREE.CylinderGeometry(1.05, 1.2, 0.8, 18),
       new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 })
     );
     stump.position.set(-1.55, 0.4, 0.2);
@@ -80,8 +91,8 @@ export class OwlStage implements StageController {
     this.root.add(this.trophy);
 
     const glowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-    const glowGeo = new THREE.SphereGeometry(0.065, 8, 8);
-    for (let i = 0; i < 18; i++) {
+    const glowGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    for (let i = 0; i < 20; i++) {
       const f = new THREE.Mesh(glowGeo, glowMat);
       f.position.set((Math.random() - 0.5) * 9.5, 0.6 + Math.random() * 3.5, (Math.random() - 0.5) * 5);
       f.userData.phase = Math.random() * Math.PI * 2;
@@ -93,27 +104,24 @@ export class OwlStage implements StageController {
 
   private buildTrophyMesh(): THREE.Group {
     const g = new THREE.Group();
-    const goldMat = new THREE.MeshStandardMaterial({
+    const goldMat = new THREE.MeshPhysicalMaterial({
       color: 0xfacc15,
       emissive: 0xd97706,
       emissiveIntensity: 0.45,
-      metalness: 0.55,
-      roughness: 0.18,
+      metalness: 0.6,
+      roughness: 0.16,
+      clearcoat: 0.9,
     });
     const medal = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 24), goldMat);
     medal.rotation.x = Math.PI / 2;
     const star = new THREE.Mesh(
       new THREE.OctahedronGeometry(0.32, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xfef08a,
-        emissiveIntensity: 0.6,
-      })
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfef08a, emissiveIntensity: 0.6 })
     );
     star.position.z = 0.08;
     const ribbon = new THREE.Mesh(
       new THREE.BoxGeometry(0.42, 0.65, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 })
+      new THREE.MeshPhysicalMaterial({ color: 0xef4444, roughness: 0.3, clearcoat: 0.5 })
     );
     ribbon.position.y = 0.72;
     g.add(medal, star, ribbon);
@@ -161,6 +169,7 @@ export class OwlStage implements StageController {
       this.owl.root.position.y = 0.8;
     }
 
+    this.wonderFlower.position.y = 1.25 + Math.sin(elapsed * 2.4) * 0.15;
     this.hero.bodyGroup.position.y = Math.abs(Math.sin(elapsed * 2.6)) * 0.09;
     this.hero.auraRing.rotation.z = elapsed * 2.2;
 

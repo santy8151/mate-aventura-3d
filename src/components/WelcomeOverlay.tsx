@@ -1,5 +1,5 @@
 import React from 'react';
-import { Car, GraduationCap, Play, Sparkles, Star, Swords } from 'lucide-react';
+import { Car, Compass, GraduationCap, Play, Sparkles, Swords } from 'lucide-react';
 
 interface WelcomeOverlayProps {
   heroName: string;
@@ -10,8 +10,8 @@ interface WelcomeOverlayProps {
 const ROADMAP = [
   {
     num: 1,
-    title: 'Batalla de Superhéroes',
-    desc: 'Lanza rayos con sumas y restas',
+    title: 'Batalla con Aliados',
+    desc: 'Proporciones, probabilidad y escudos',
     color: 'bg-sky-50 border-sky-200 text-sky-800',
     badge: 'bg-sky-500',
     Icon: Swords,
@@ -19,23 +19,23 @@ const ROADMAP = [
   {
     num: 2,
     title: 'Carrera Matemática',
-    desc: 'Esquiva y cruza el portal correcto',
+    desc: 'Cálculo rápido en autopista 3D',
     color: 'bg-rose-50 border-rose-200 text-rose-800',
     badge: 'bg-rose-500',
     Icon: Car,
   },
   {
     num: 3,
-    title: 'Saltos y Evolución',
-    desc: 'Salta contando y gana tu corona',
+    title: 'Plano Cartesiano',
+    desc: 'Coordenadas (X, Y) en Mundo Mario',
     color: 'bg-amber-50 border-amber-200 text-amber-800',
     badge: 'bg-amber-500',
-    Icon: Star,
+    Icon: Compass,
   },
   {
     num: 4,
     title: 'Búho Mentor',
-    desc: 'Reflexiona y recibe tu medalla',
+    desc: 'Casos de probabilidad y medalla',
     color: 'bg-violet-50 border-violet-200 text-violet-800',
     badge: 'bg-violet-500',
     Icon: GraduationCap,
@@ -53,7 +53,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
         <div className="text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border-2 border-amber-300 px-3 py-0.5 text-[11px] font-black text-amber-800 uppercase tracking-wider mb-1">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Aventura 3D Educativa</span>
+            <span>Aventura 3D Estilo Nintendo</span>
           </div>
 
           <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-slate-900">
@@ -61,11 +61,11 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
             <span className="text-amber-500">3D</span>
           </h1>
           <p className="mt-0.5 text-xs sm:text-sm font-bold text-slate-600">
-            ¡Supera 4 mundos mágicos sumando, restando, corriendo y saltando!
+            ¡Domina proporciones, probabilidad y plano cartesiano en 4 mundos mágicos!
           </p>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {ROADMAP.map(({ num, title, desc, color, badge, Icon }) => (
             <div
               key={num}
@@ -85,10 +85,10 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
           ))}
         </div>
 
-        <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+        <div className="mt-3.5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
           <label className="flex-1 block">
             <span className="block text-xs font-black text-slate-600 mb-1 ml-1">
-              Nombre de tu Superhéroe (para tu diploma final):
+              Nombre de tu Superhéroe (para tu certificado):
             </span>
             <input
               type="text"
@@ -96,14 +96,14 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
               value={heroName}
               onChange={(e) => onChangeHeroName(e.target.value)}
               placeholder="Súper Explorador"
-              className="w-full rounded-2xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-base font-extrabold text-slate-800 focus:border-sky-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-2xl border-2 border-slate-300 bg-slate-50 px-4 py-2 text-base font-extrabold text-slate-800 focus:border-sky-500 focus:bg-white focus:outline-none"
             />
           </label>
 
           <button
             type="button"
             onClick={onStart}
-            className="btn-toy flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white border-2 border-emerald-600 border-b-[6px] px-7 py-3 text-lg font-display font-bold shadow-lg cursor-pointer"
+            className="btn-toy flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white border-2 border-emerald-600 border-b-[6px] px-7 py-2.5 text-lg font-display font-bold shadow-lg cursor-pointer"
           >
             <Play className="w-5 h-5 fill-white" />
             <span>¡Jugar Ahora!</span>

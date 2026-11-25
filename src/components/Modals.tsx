@@ -9,9 +9,9 @@ interface LevelCompleteModalProps {
 }
 
 const LEVEL_TITLES: Record<LevelNumber, string> = {
-  1: '¡Derrotaste al Dr. Glitcheo!',
+  1: '¡Derrotaste al Titán Caos-X con tus Aliados!',
   2: '¡Cruzaste la Meta a Todo Turbo!',
-  3: '¡Dominaste los Saltos y Evolucionaste!',
+  3: '¡Dominaste el Plano Cartesiano Mario!',
   4: '¡Completaste toda MateAventura 3D!',
 };
 

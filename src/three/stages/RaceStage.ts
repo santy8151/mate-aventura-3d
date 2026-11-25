@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import type { LaneIndex, RaceVisualState } from '../../types/game';
 import {
   createCloudModel,
-  createCuteTree,
   createKartModel,
   createMarioCastle,
   createMarioHill,
+  createRainbowArch,
   createWarpPipe,
+  createWonderFlower,
+  createWonderTree,
 } from '../models';
 import type { KartRig } from '../models';
 import { ParticleBurstSystem } from '../particles';
@@ -24,7 +26,6 @@ export class RaceStage implements StageController {
   public readonly root = new THREE.Group();
   public readonly skyColor = 0x0284c7;
   public readonly fogColor = 0xbae6fd;
-  // Cámara 3D Mario Kart clara y elevada para ver kart + pista + portales sin tapar con controles
   public readonly cameraPos = new THREE.Vector3(0, 4.9, 11.2);
   public readonly cameraTarget = new THREE.Vector3(0, 0.55, -4.5);
 
@@ -57,33 +58,31 @@ export class RaceStage implements StageController {
     this.root.add(createSkyDome(0x0284c7, 0xbae6fd));
     this.root.add(this.particles.group);
 
-    // Pradera verde de circuito
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(160, 160),
-      new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.85 })
+      new THREE.MeshPhysicalMaterial({ color: 0x4ade80, roughness: 0.75 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, -0.06, -30);
     ground.receiveShadow = true;
     this.root.add(ground);
 
-    // Autopista con textura asfáltica animada y líneas Mario Kart
     this.roadTex = createRoadAsphaltTexture();
     this.roadTex.repeat.set(1, 14);
     const road = new THREE.Mesh(
       new THREE.BoxGeometry(10.8, 0.2, 100),
-      new THREE.MeshStandardMaterial({ map: this.roadTex, roughness: 0.65 })
+      new THREE.MeshPhysicalMaterial({ map: this.roadTex, roughness: 0.55, clearcoat: 0.2 })
     );
     road.position.set(0, -0.05, -28);
     road.receiveShadow = true;
     this.root.add(road);
 
-    // Bordillos rojo-blanco Mario Kart
     for (let z = -70; z <= 14; z += 4) {
       const isRed = Math.abs(Math.floor(z / 4)) % 2 === 0;
-      const curbMat = new THREE.MeshStandardMaterial({
+      const curbMat = new THREE.MeshPhysicalMaterial({
         color: isRed ? 0xef4444 : 0xffffff,
-        roughness: 0.4,
+        roughness: 0.3,
+        clearcoat: 0.45,
       });
       const leftCurb = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.3, 3.9), curbMat);
       leftCurb.position.set(-5.65, 0.06, z);
@@ -92,7 +91,6 @@ export class RaceStage implements StageController {
       this.root.add(leftCurb, rightCurb);
     }
 
-    // Separadores de carriles animados
     const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 });
     const stripeGeo = new THREE.BoxGeometry(0.24, 0.06, 2.8);
     for (let i = 0; i < 15; i++) {
@@ -105,7 +103,6 @@ export class RaceStage implements StageController {
       this.stripes.push(divL, divR);
     }
 
-    // Arcos decorativos de circuito Mario Kart que avanzan
     for (let i = 0; i < 3; i++) {
       const arch = this.buildStadiumArch(i % 2 === 0 ? 0xef4444 : 0x3b82f6);
       arch.position.set(0, 0, -18 - i * 24);
@@ -113,20 +110,14 @@ export class RaceStage implements StageController {
       this.stadiumArches.push(arch);
     }
 
-    // Indicador luminoso de carril activo
     this.laneHighlight = new THREE.Mesh(
       new THREE.PlaneGeometry(2.7, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        transparent: true,
-        opacity: 0.24,
-      })
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.24 })
     );
     this.laneHighlight.rotation.x = -Math.PI / 2;
     this.laneHighlight.position.set(0, 0.07, -7);
     this.root.add(this.laneHighlight);
 
-    // Planos clicables para los 3 carriles
     const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     ([0, 1, 2] as LaneIndex[]).forEach((laneIdx) => {
       const plane = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 65), hitMat);
@@ -137,29 +128,39 @@ export class RaceStage implements StageController {
       this.laneHitPlanes.push(plane);
     });
 
-    // Árboles, tuberías y colinas Nintendo a ambos lados de la pista
     for (let i = 0; i < 10; i++) {
       const z = -64 + i * 8;
-      const propL = i % 3 === 0 ? createWarpPipe(2.0, false) : createCuteTree(0x22c55e, 1.25);
-      propL.position.set(-8.6 - (i % 2) * 1.4, 0, z);
-      const propR = i % 3 === 1 ? createWarpPipe(2.0, false) : createCuteTree(0x16a34a, 1.25);
-      propR.position.set(8.6 + ((i + 1) % 2) * 1.4, 0, z);
+      const propL =
+        i % 3 === 0
+          ? createWarpPipe(2.1, i === 3)
+          : i % 3 === 1
+            ? createWonderTree(0.95)
+            : createWonderFlower(1.2);
+      propL.position.set(-8.8 - (i % 2) * 1.4, i % 3 === 2 ? 1.1 : 0, z);
+      const propR =
+        i % 3 === 1
+          ? createWarpPipe(2.1, i === 4)
+          : i % 3 === 0
+            ? createWonderTree(0.95)
+            : createWonderFlower(1.2);
+      propR.position.set(8.8 + ((i + 1) % 2) * 1.4, i % 3 === 2 ? 1.1 : 0, z);
       this.root.add(propL, propR);
       this.roadsideProps.push(propL, propR);
     }
 
-    // Colinas lejanas, castillo en el horizonte y nubes
+    const rainbow = createRainbowArch(24);
+    rainbow.position.set(0, -1, -56);
     const hillL = createMarioHill(0x22c55e, 5.2, 9.5);
     hillL.position.set(-19, -1, -46);
     const hillR = createMarioHill(0x4ade80, 4.6, 8.2);
     hillR.position.set(19, -1, -48);
-    const castle = createMarioCastle(1.1);
+    const castle = createMarioCastle(1.15);
     castle.position.set(0, 0, -56);
     const c1 = createCloudModel(1.7);
     c1.position.set(-12, 8.2, -32);
     const c2 = createCloudModel(1.5);
     c2.position.set(13, 9.0, -40);
-    this.root.add(hillL, hillR, castle, c1, c2);
+    this.root.add(rainbow, hillL, hillR, castle, c1, c2);
 
     this.buildPortalGroup();
     this.root.add(this.portalGroup);
@@ -168,7 +169,6 @@ export class RaceStage implements StageController {
     this.finishArch.visible = false;
     this.root.add(this.finishArch);
 
-    // Kart bien visible sobre la parte baja-media de la pantalla
     this.kart = createKartModel();
     this.kart.root.position.set(0, 0.06, 3.2);
     this.root.add(this.kart.root);
@@ -176,10 +176,10 @@ export class RaceStage implements StageController {
 
   private buildStadiumArch(colorHex: number): THREE.Group {
     const g = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35 });
-    const lPost = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 6.2, 12), mat);
+    const mat = new THREE.MeshPhysicalMaterial({ color: colorHex, roughness: 0.25, clearcoat: 0.65 });
+    const lPost = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 6.2, 14), mat);
     lPost.position.set(-6.3, 3.1, 0);
-    const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 6.2, 12), mat);
+    const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 6.2, 14), mat);
     rPost.position.set(6.3, 3.1, 0);
     const beam = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.65, 0.55), mat);
     beam.position.set(0, 6.1, 0);
@@ -193,14 +193,15 @@ export class RaceStage implements StageController {
       const arch = new THREE.Group();
       arch.position.set(x, 0, 0);
 
-      const archMat = new THREE.MeshStandardMaterial({
+      const archMat = new THREE.MeshPhysicalMaterial({
         color: frameColors[idx],
         emissive: frameColors[idx],
         emissiveIntensity: 0.25,
-        roughness: 0.3,
+        roughness: 0.25,
+        clearcoat: 0.7,
       });
 
-      const pillarGeo = new THREE.CylinderGeometry(0.2, 0.24, 3.3, 12);
+      const pillarGeo = new THREE.CylinderGeometry(0.2, 0.24, 3.3, 14);
       const lPillar = new THREE.Mesh(pillarGeo, archMat);
       lPillar.position.set(-1.32, 1.65, 0);
       lPillar.castShadow = true;
@@ -242,7 +243,7 @@ export class RaceStage implements StageController {
     const checker = createCheckerTexture('#0f172a', '#ffffff', 6);
     checker.repeat.set(3, 1);
 
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25 });
+    const poleMat = new THREE.MeshPhysicalMaterial({ color: 0xfacc15, roughness: 0.2, clearcoat: 0.7 });
     const lPole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 4.8, 12), poleMat);
     lPole.position.set(-4.8, 2.4, 0);
     const rPole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 4.8, 12), poleMat);

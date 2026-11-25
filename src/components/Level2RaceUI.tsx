@@ -58,7 +58,6 @@ export const Level2RaceUI: React.FC<Level2RaceUIProps> = ({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between pt-20 pb-3 px-3 sm:px-6">
-      {/* Encabezado de Operación y Progreso de Portales */}
       <div className="mx-auto w-full max-w-3xl flex flex-col items-center gap-2">
         <div className="w-full flex flex-wrap items-center justify-between gap-2">
           <div className="pointer-events-auto rounded-2xl bg-rose-600/90 backdrop-blur text-white border-2 border-rose-300 px-3.5 py-1.5 text-xs sm:text-sm font-black shadow-md flex items-center gap-2">
@@ -80,13 +79,14 @@ export const Level2RaceUI: React.FC<Level2RaceUIProps> = ({
           </div>
         </div>
 
-        {/* Operación grande estilo marcador Mario Kart */}
-        <div className="pointer-events-auto rounded-3xl bg-white/95 border-4 border-amber-400 shadow-[0_8px_0_rgba(15,23,42,0.18)] px-8 py-2 text-center animate-pop-in">
+        <div className="pointer-events-auto rounded-3xl bg-white/95 border-4 border-amber-400 shadow-[0_8px_0_rgba(15,23,42,0.18)] px-6 py-2 text-center animate-pop-in">
           <div className="text-[11px] font-black uppercase tracking-wider text-rose-600">
-            ¡Mueve el kart con las flechas ← → al resultado correcto!
+            {problem.category === 'proportions'
+              ? problem.prompt
+              : '¡Mueve el kart con las flechas ← → al resultado correcto!'}
           </div>
           <div className="font-display text-3xl sm:text-5xl font-bold text-slate-900">
-            {problem.text}
+            {problem.shortExpr}
           </div>
         </div>
 
@@ -103,7 +103,6 @@ export const Level2RaceUI: React.FC<Level2RaceUIProps> = ({
         )}
       </div>
 
-      {/* Controles inferiores compactos */}
       <div className="mx-auto w-full max-w-2xl">
         <div className="pointer-events-auto rounded-[1.5rem] bg-white/90 backdrop-blur-md border-4 border-white shadow-[0_8px_0_rgba(15,23,42,0.15)] px-3 py-2.5 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">

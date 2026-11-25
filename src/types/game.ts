@@ -4,15 +4,36 @@ export type GameScreen = 'welcome' | 'playing' | 'level-complete' | 'game-over';
 
 export type LaneIndex = 0 | 1 | 2; // 0 = Izquierda, 1 = Centro, 2 = Derecha
 
+export type AllyId = 'dino' | 'princess' | 'toad';
+
 export interface MathProblem {
   id: string;
-  a: number;
-  b: number;
-  op: '+' | '-';
-  answer: number;
-  options: number[];
-  text: string;
+  category: 'proportions' | 'probability' | 'arithmetic';
+  prompt: string;
+  shortExpr: string;
+  answer: number | string;
+  options: (number | string)[];
   hint: string;
+  visualBadge?: string;
+}
+
+export interface CartesianChallenge {
+  id: string;
+  targetX: number; // 0..5
+  targetY: number; // 0..5
+  itemLabel: string;
+  hint: string;
+}
+
+export interface ProbabilityScenario {
+  id: string;
+  situation: string;
+  question: string;
+  options: {
+    label: string;
+    isCorrect: boolean;
+    explanation: string;
+  }[];
 }
 
 export interface PlayerStats {
@@ -30,7 +51,15 @@ export interface BattleVisualState {
   round: number;
   villainHp: number;
   maxVillainHp: number;
-  event: 'idle' | 'hero-attack' | 'villain-attack' | 'villain-defeated';
+  activeAlly: AllyId;
+  shieldActive: boolean;
+  event:
+    | 'idle'
+    | 'ally-summon'
+    | 'hero-attack'
+    | 'ally-block'
+    | 'villain-attack'
+    | 'villain-defeated';
   eventTick: number;
 }
 
@@ -47,18 +76,21 @@ export interface RaceVisualState {
 }
 
 export interface PlatformVisualState {
-  stageIndex: number; // 0..3 (4 problemas)
+  stageIndex: number; // 0..3 (4 retos en Plano Cartesiano)
   totalStages: number; // 4
-  jumpCount: number;
-  targetAnswer: number;
-  evolutionTier: number; // 0 = normal, 1 = poder rojo, 2 = capa, 3 = aura estrella, 4 = corona real
+  heroX: number; // 0..5
+  heroY: number; // 0..5
+  targetX: number; // 0..5
+  targetY: number; // 0..5
+  foundCoords: { x: number; y: number }[];
+  evolutionTier: number; // 0..4
   evolved: boolean;
-  event: 'idle' | 'jump' | 'bump-fail' | 'advance' | 'evolve';
+  event: 'idle' | 'hop' | 'bump-fail' | 'discover' | 'evolve';
   eventTick: number;
 }
 
 export interface OwlVisualState {
-  step: 'summary' | 'q1' | 'q2' | 'certificate';
+  step: 'summary' | 'prob1' | 'prob2' | 'q1' | 'q2' | 'certificate';
   event: 'idle' | 'talk' | 'happy' | 'trophy';
   eventTick: number;
 }

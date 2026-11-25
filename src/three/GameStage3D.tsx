@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type {
   BattleVisualState,
   GameScreen,
@@ -23,6 +24,7 @@ interface GameStage3DProps {
   platformState: PlatformVisualState;
   owlState: OwlVisualState;
   onSelectRaceLane: (lane: LaneIndex) => void;
+  onSelectCartesianTile: (x: number, y: number) => void;
   onHeroHeadScreenPos: (xPct: number, yPct: number) => void;
 }
 
@@ -34,6 +36,7 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
   platformState,
   owlState,
   onSelectRaceLane,
+  onSelectCartesianTile,
   onHeroHeadScreenPos,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,28 +45,28 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
-  // Refs para callbacks recientes sin reconstruir la escena
   const onSelectRaceLaneRef = useRef(onSelectRaceLane);
   onSelectRaceLaneRef.current = onSelectRaceLane;
+  const onSelectCartesianTileRef = useRef(onSelectCartesianTile);
+  onSelectCartesianTileRef.current = onSelectCartesianTile;
   const onHeroHeadScreenPosRef = useRef(onHeroHeadScreenPos);
   onHeroHeadScreenPosRef.current = onHeroHeadScreenPos;
 
-  // Inicializar WebGLRenderer una sola vez
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x7dd3fc);
-    scene.fog = new THREE.Fog(0xbae6fd, 24, 72);
+    scene.fog = new THREE.Fog(0xbae6fd, 28, 86);
 
     const camera = new THREE.PerspectiveCamera(
       50,
       container.clientWidth / Math.max(1, container.clientHeight),
       0.1,
-      140
+      160
     );
-    camera.position.set(0, 3.8, 9.8);
+    camera.position.set(0, 3.8, 10.2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -71,29 +74,37 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.06;
     container.appendChild(renderer.domElement);
 
-    // Iluminación cálida estilo juguete Nintendo
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x86efac, 1.05);
+    // Entorno PBR realista estilo Switch / Pixar
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const roomEnv = new RoomEnvironment();
+    const envTarget = pmrem.fromScene(roomEnv, 0.04);
+    scene.environment = envTarget.texture;
+    scene.environmentIntensity = 0.65;
+    roomEnv.dispose();
+    pmrem.dispose();
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x86efac, 0.85);
     scene.add(hemi);
 
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.55);
-    sun.position.set(8, 14, 9);
+    sun.position.set(10, 18, 12);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 42;
-    sun.shadow.camera.left = -12;
-    sun.shadow.camera.right = 12;
-    sun.shadow.camera.top = 12;
-    sun.shadow.camera.bottom = -12;
-    sun.shadow.bias = -0.001;
+    sun.shadow.camera.far = 55;
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.bias = -0.0008;
     scene.add(sun);
 
-    const fill = new THREE.DirectionalLight(0x93c5fd, 0.45);
-    fill.position.set(-8, 5, -6);
-    scene.add(fill);
+    const rimLight = new THREE.DirectionalLight(0x93c5fd, 0.55);
+    rimLight.position.set(-10, 7, -10);
+    scene.add(rimLight);
 
     sceneRef.current = scene;
     cameraRef.current = camera;
@@ -133,6 +144,7 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
         stageRef.current.dispose();
         stageRef.current = null;
       }
+      envTarget.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
@@ -140,7 +152,6 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
     };
   }, []);
 
-  // Cambiar escenario 3D según pantalla / nivel activo
   useEffect(() => {
     const scene = sceneRef.current;
     const camera = cameraRef.current;
@@ -160,7 +171,10 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
     } else if (level === 2) {
       nextStage = new RaceStage((lane) => onSelectRaceLaneRef.current(lane));
     } else if (level === 3) {
-      nextStage = new PlatformStage((x, y) => onHeroHeadScreenPosRef.current(x, y));
+      nextStage = new PlatformStage(
+        (x, y) => onSelectCartesianTileRef.current(x, y),
+        (xPct, yPct) => onHeroHeadScreenPosRef.current(xPct, yPct)
+      );
     } else {
       nextStage = new OwlStage();
     }
@@ -168,7 +182,7 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
     stageRef.current = nextStage;
     scene.add(nextStage.root);
     scene.background = new THREE.Color(nextStage.skyColor);
-    scene.fog = new THREE.Fog(nextStage.fogColor, 24, 72);
+    scene.fog = new THREE.Fog(nextStage.fogColor, 28, 86);
 
     camera.fov = 50;
     camera.position.copy(nextStage.cameraPos);
@@ -176,7 +190,6 @@ export const GameStage3D: React.FC<GameStage3DProps> = ({
     camera.updateProjectionMatrix();
   }, [screen, level]);
 
-  // Sincronizar estado reactivo hacia el escenario 3D activo
   useEffect(() => {
     const st = stageRef.current;
     if (!st) return;

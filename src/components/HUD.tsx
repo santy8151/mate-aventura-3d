@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, Flame, Heart, RotateCcw, Sparkles, Swords, Car, Star, GraduationCap, Volume2, VolumeX } from 'lucide-react';
+import { Coins, Compass, Flame, Heart, RotateCcw, Sparkles, Swords, Car, GraduationCap, Volume2, VolumeX } from 'lucide-react';
 import type { LevelNumber } from '../types/game';
 
 interface HUDProps {
@@ -17,7 +17,7 @@ interface HUDProps {
 const LEVELS: { num: LevelNumber; label: string; Icon: React.FC<{ className?: string }> }[] = [
   { num: 1, label: 'Batalla', Icon: Swords },
   { num: 2, label: 'Carrera', Icon: Car },
-  { num: 3, label: 'Saltos', Icon: Star },
+  { num: 3, label: 'Plano (X,Y)', Icon: Compass },
   { num: 4, label: 'Búho', Icon: GraduationCap },
 ];
 
